@@ -1,30 +1,45 @@
 package ru.mail.polis;
-
 import java.util.*;
+/**
+ * Created by germanium on 26.01.17.
+ */
 
-//TODO: write code here
 public class AVLTree<E extends Comparable<E>> implements ISortedSet<E> {
 
-//    private Node root;
     class Node {
-       Node left;
-       Node right;
-       Node parent;
-       E value;
-       int balance;
 
-       public Node(E value) {
-           left = right = parent = null;
-           balance = 0;
-           this.value = value;
-       }
+        Node(E value) {
+            this.value = value;
+        }
 
-       public String toString() {
-           return "" + value;
-       }
+        E value;
+        int height;
+        Node left;
+        Node right;
+        Node parent;
+
+        @Override
+        public String toString() {
+            final StringBuilder sb = new StringBuilder("N{");
+            sb.append("d=").append(value);
+            if (parent != null) {
+                sb.append(", p=").append(parent);
+            }
+            if (left != null) {
+                sb.append(", l=").append(left);
+            }
+            if (right != null) {
+                sb.append(", r=").append(right);
+            }
+            sb.append("h=").append(height);
+            sb.append('}');
+            return sb.toString();
+        }
     }
 
+
     private Node root;
+//    private final static int K = 1;
     private int size;
     private final Comparator<E> comparator;
 
@@ -36,6 +51,7 @@ public class AVLTree<E extends Comparable<E>> implements ISortedSet<E> {
         this.comparator = comparator;
     }
 
+
     @Override
     public E first() {
         if (isEmpty()) {
@@ -45,7 +61,8 @@ public class AVLTree<E extends Comparable<E>> implements ISortedSet<E> {
         while (curr.left != null) {
             curr = curr.left;
         }
-        return curr.value;    }
+        return curr.value;
+    }
 
     @Override
     public E last() {
@@ -60,24 +77,12 @@ public class AVLTree<E extends Comparable<E>> implements ISortedSet<E> {
     }
 
     @Override
-    public List<E> inorderTraverse() {
-        List<E> list = new ArrayList<>(size);
-        inorderTraverse(root, list);
-        return list;
-    }
-
-    private void inorderTraverse(Node curr, List<E> list) {
-        if (curr == null) {
-            return;
-        }
-        inorderTraverse(curr.left, list);
-        list.add(curr.value);
-        inorderTraverse(curr.right, list);
-    }
-
-    @Override
     public int size() {
         return size;
+    }
+
+    public E root() {
+        return root.value;
     }
 
     @Override
@@ -107,311 +112,320 @@ public class AVLTree<E extends Comparable<E>> implements ISortedSet<E> {
     }
 
     @Override
-    public boolean add(E value) {
-        Node newNode = new Node(value);
-        if(insertAVL(this.root,newNode)){
-            size++;
-            return true;
-        }
-        return false;
+    public List<E> inorderTraverse() {
+        List<E> list = new ArrayList<E>(size);
+        inorderTraverse(root, list);
+        return list;
     }
+
+    private void inorderTraverse(Node curr, List<E> list) {
+        if (curr == null) {
+            return;
+        }
+        inorderTraverse(curr.left, list);
+        list.add(curr.value);
+        inorderTraverse(curr.right, list);
+    }
+
+    public int getHeight() {
+        return getHeight(root);
+    }
+
+    private int getHeight(Node node) {
+        if (node == null) return 0;
+        return Math.max(getHeight(node.left), getHeight(node.right)) + 1;
+    }
+
+    public Node search(E value) {
+        return search(root, value);
+    }
+
+    private Node search(Node curr, E val) {
+        if (curr == null || curr.value.equals(val)) {
+            return curr;
+        }
+        if (curr.value.compareTo(val) > 0) {
+            return search(curr.left, val);
+        } else {
+            return search(curr.right, val);
+        }
+    }
+
+
+    @Override
+    public boolean add(E value) {
+        if (value == null) {
+            throw new NullPointerException("value is null");
+        }
+        if (root == null) {
+            root = new Node(value);
+            root.height = 1;
+        } else {
+            Node curr = root;
+            while (true) {
+                int cmp = compare(curr.value, value);
+                if (cmp == 0) {
+                    return false;
+                } else if (cmp < 0) {
+                    if (curr.right != null) {
+                        curr = curr.right;
+                    } else {
+                        curr.right = new Node(value);
+                        curr.right.parent = curr;
+                        curr.right.height = 1;
+                        break;
+                    }
+                } else if (cmp > 0) {
+                    if (curr.left != null) {
+                        curr = curr.left;
+                    } else {
+                        curr.left = new Node(value);
+                        curr.left.parent = curr;
+                        curr.left.height = 1;
+                        break;
+                    }
+                }
+            }
+            addBalance(curr);
+        }
+        size++;
+
+
+        return true;
+    }
+
+
+    public void addBalance(Node curr) {
+        int difference;
+        while (true) {
+            difference = diff(curr);
+            if (difference == 0) break;
+            else if (Math.abs(difference) == 1) {
+                curr.height++;
+            } else if (Math.abs(difference) == 2) {
+                rotate(curr, difference);
+                curr = curr.parent;
+            }
+            if (curr.parent != null) curr = curr.parent;
+            else {
+                root = curr;
+                break;
+            }
+        }
+
+    }
+
+    public void rotate(Node a, int dh) {
+        Node b;
+        int diffB;
+        if (dh == -2) {
+            b = a.right;
+            diffB = diff(b);
+            if (diffB != 1) rotateLeft(a);
+            else bigRotateLeft(a);
+        } else if (dh == 2) {
+            b = a.left;
+            diffB = diff(b);
+            if (diffB != -1) rotateRight(a);
+            else bigRotateRight(a);
+        }
+    }
+
+    public int diff(Node b) {
+        int difference;
+        if (b.left == null && b.right == null) difference = 0;
+        else if (b.left == null) difference = -b.right.height;
+        else if (b.right == null) difference = b.left.height;
+        else {
+            difference = b.left.height - b.right.height;
+        }
+        return difference;
+    }
+
+
+    public void rotateLeft(Node a) {
+        Node b = a.right;
+        int cmp;
+        a.right = b.left;
+        if (b.left != null) b.left.parent = a;
+        b.left = a;
+        cmp = compare(a.value, root.value);
+        if (cmp == 0) {
+            root = b;
+            root.parent = null;
+        } else {
+            b.parent = a.parent;
+            if (a.parent.left != null) {
+                cmp = compare(a.parent.left.value, a.value);
+                if (cmp == 0) a.parent.left = b;
+                else a.parent.right = b;
+            } else if (a.parent.right != null) a.parent.right = b;
+        }
+        a.parent = b;
+        a.height = setHeight(a);
+        b.height = setHeight(b);
+    }
+
+    public int setHeight(Node a) {
+        int h;
+        if (a.left != null && a.right != null) {
+            h = Math.max(a.left.height, a.right.height) + 1;
+        } else {
+            h = Math.abs(diff(a)) + 1;
+        }
+        return h;
+    }
+
+    public void bigRotateLeft(Node a) {
+        rotateRight(a.right);
+        rotateLeft(a);
+    }
+
+    public void rotateRight(Node a) { /****/
+        Node b = a.left;
+        int cmp;
+        a.left = b.right;
+        if (b.right != null) b.right.parent = a;
+        b.right = a;
+        cmp = compare(a.value, root.value);
+        if (cmp == 0) {
+            root = b;
+            root.parent = null;
+        } else {
+            b.parent = a.parent;
+            if (a.parent.left != null) {
+                cmp = compare(a.parent.left.value, a.value);
+                if (cmp == 0) a.parent.left = b;
+                else a.parent.right = b;
+            } else if (a.parent.right != null) a.parent.right = b;
+        }
+        a.parent = b;
+        a.height = setHeight(a);
+        b.height = setHeight(b);
+    }
+
+    public void bigRotateRight(Node a) {
+        rotateLeft(a.left);
+        rotateRight(a);
+    }
+
+
+    public void removeBalance(Node curr) {
+        int dh;
+        while (true) {
+            dh = diff(curr);
+            if (Math.abs(dh) == 1) break;
+            else if (dh == 0) {
+                curr.height--;
+            } else if (Math.abs(dh) == 2) {
+                rotate(curr, dh);
+                curr=curr.parent;
+            }
+            if (curr.parent != null) curr = curr.parent;
+            else {
+                root = curr;
+                break;
+            }
+        }
+
+    }
+
 
     @Override
     public boolean remove(E value) {
-        if(removeAVL(this.root,value)){
-            size--;
-            return true;
+        if (value == null) {
+            throw new NullPointerException("value is null");
         }
-        return false;
-    }
-
-
-
-    private boolean insertAVL(Node parent, Node newNode) {
-        // If  node to compare is null, the node is inserted. If the root is null, it is the root of the tree.
-        if(parent==null) {
-            this.root=newNode;
-        } else {
-
-            // If compare node is smaller, continue with the left node
-            if(compare(newNode.value,parent.value)<0) {
-                if(parent.left==null) {
-                    parent.left = newNode;
-                    newNode.parent = parent;
-
-                    // Node is inserted now, continue checking the balance
-                    recursiveBalance(parent);
-                } else {
-                    insertAVL(parent.left,newNode);
-                }
-
-            } else if(compare(newNode.value,parent.value)>0) {
-                if(parent.right==null) {
-                    parent.right = newNode;
-                    newNode.parent = parent;
-
-                    // Node is inserted now, continue checking the balance
-                    recursiveBalance(parent);
-                } else {
-                    insertAVL(parent.right,newNode);
-                }
-            } else {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private boolean removeAVL(Node parent,E value) {
-        if(parent==null) {
+        if (root == null) {
             return false;
-        } else {
-            if(compare(parent.value,value)>0)  {
-                removeAVL(parent.left,value);
-            } else if(compare(parent.value,value)<0) {
-                removeAVL(parent.right,value);
-            } else if(parent.value==value) {
-                // we found the node in the tree
-                removeFoundNode(parent);
+        }
+        Node parent = root;
+        Node curr = root;
+        Node pRemote; //parent of remote node
+        int cmp;
+        while ((cmp = compare(curr.value, value)) != 0) {
+            parent = curr;
+            if (cmp > 0) {
+                curr = curr.left;
+            } else {
+                curr = curr.right;
+            }
+            if (curr == null) {
+                return false; // ничего не нашли
             }
         }
+        if (curr.left != null && curr.right != null) {
+            Node next = curr.right;
+            Node pNext = curr;
+            while (next.left != null) {
+                pNext = next;
+                next = next.left;
+            } //next = наименьший из больших
+            curr.value = next.value;
+            next.value = null;
+            //у правого поддерева нет левых потомков
+            if (pNext == curr) {
+                curr.right = next.right;
+            } else {
+                pNext.left = next.right;
+            }
+            if (next.right != null) next.right.parent = pNext;
+
+            pRemote = pNext;
+            next.right = null;
+        } else {
+            pRemote = parent;
+            if (curr.left != null) {
+                reLink(parent, curr, curr.left);
+            } else if (curr.right != null) {
+                reLink(parent, curr, curr.right);
+            } else {
+                reLink(parent, curr, null);
+            }
+        }
+        if (root != null) removeBalance(pRemote);
+        size--;
         return true;
     }
 
-
-    private void removeFoundNode(Node newNode) {
-        Node r;
-        // at least one child of newNode, newNode will be removed directly
-        if(newNode.left==null || newNode.right==null) {
-            // the root is deleted
-            if(newNode.parent==null) {
-                if(newNode.left!=null) {
-                    this.root = newNode.left;
-                    this.root.parent=null;
-                }
-                else if(newNode.right!=null) {
-                    this.root = newNode.right;
-                    this.root.parent=null;
-                }
-                else {
-                    this.root=null;
-                }
-                return;
-            }
-            r = newNode;
+    private void reLink(Node parent, Node curr, Node child) {
+        if (parent == curr) {
+            if (child != null && child.parent != null) child.parent = null;
+            root = child;
+        } else if (parent.left == curr) {
+            parent.left = child;
+            if (child != null && child.parent != null) child.parent = parent;
         } else {
-            // newNode has two children --> will be replaced by successor
-            r = successor(newNode);
-            newNode.value = r.value;
+            parent.right = child;
+            if (child != null && child.parent != null) child.parent = parent;
         }
-
-        Node p;
-        if(r.left!=null) {
-            p = r.left;
-        } else {
-            p = r.right;
-        }
-
-        if(p!=null) {
-            p.parent = r.parent;
-        }
-
-        if(r.parent==null) {
-            this.root = p;
-        } else {
-            if(r==r.parent.left) {
-                r.parent.left=p;
-            } else {
-                r.parent.right = p;
-            }
-            // balancing must be done until the root is reached.
-            recursiveBalance(r.parent);
-        }
-    }
-
-
-    private void recursiveBalance(Node cur) {
-
-        // we do not use the balance in this class, but the store it anyway
-        setBalance(cur);
-        int balance = cur.balance;
-
-        // check the balance
-        if(balance==-2) {
-
-            if(height(cur.left.left)>=height(cur.left.right)) {
-                cur = rotateRight(cur);
-            } else {
-                cur = doubleRotateLeftRight(cur);
-            }
-        } else if(balance==2) {
-            if(height(cur.right.right)>=height(cur.right.left)) {
-                cur = rotateLeft(cur);
-            } else {
-                cur = doubleRotateRightLeft(cur);
-            }
-        }
-
-        // we did not reach the root yet
-        if(cur.parent!=null) {
-            recursiveBalance(cur.parent);
-        } else {
-            this.root = cur;
-            System.out.println("------------ Balancing finished ----------------");
-        }
-    }
-
-    private Node rotateLeft(Node n) {
-
-        Node v = n.right;
-        v.parent = n.parent;
-
-        n.right = v.left;
-
-        if(n.right!=null) {
-            n.right.parent=n;
-        }
-
-        v.left = n;
-        n.parent = v;
-
-        if(v.parent!=null) {
-            if(v.parent.right==n) {
-                v.parent.right = v;
-            } else if(v.parent.left==n) {
-                v.parent.left = v;
-            }
-        }
-
-        setBalance(n);
-        setBalance(v);
-
-        return v;
-    }
-
-
-    private Node rotateRight(Node n) {
-
-        Node v = n.left;
-        v.parent = n.parent;
-
-        n.left = v.right;
-
-        if(n.left!=null) {
-            n.left.parent=n;
-        }
-
-        v.right = n;
-        n.parent = v;
-
-
-        if(v.parent!=null) {
-            if(v.parent.right==n) {
-                v.parent.right = v;
-            } else if(v.parent.left==n) {
-                v.parent.left = v;
-            }
-        }
-
-        setBalance(n);
-        setBalance(v);
-
-        return v;
-    }
-
-    private Node doubleRotateLeftRight(Node u) {
-        u.left = rotateLeft(u.left);
-        return rotateRight(u);
-    }
-
-    private Node doubleRotateRightLeft(Node u) {
-        u.right = rotateRight(u.right);
-        return rotateLeft(u);
-    }
-
-
-    private void setBalance(Node cur) {
-        cur.balance = height(cur.right)-height(cur.left);
-    }
-
-    private int height(Node cur) {
-        if(cur==null) {
-            return -1;
-        }
-        if(cur.left==null && cur.right==null) {
-            return 0;
-        } else if(cur.left==null) {
-            return 1+height(cur.right);
-        } else if(cur.right==null) {
-            return 1+height(cur.left);
-        } else {
-            return 1+maximum(height(cur.left),height(cur.right));
-        }
-    }
-
-    private int maximum(int a, int b) {
-        if(a>=b) {
-            return a;
-        } else {
-            return b;
-        }
-    }
-
-    private Node successor(Node node) {
-        if(node.right!=null) {
-            Node node1 = node.right;
-            while(node1.left!=null) {
-                node1 = node1.left;
-            }
-            return node1;
-        } else {
-            Node parent = node.parent;
-            while(parent!=null && node==parent.right) {
-                node = parent;
-                parent = node.parent;
-            }
-            return parent;
-        }
+        curr.value = null;
     }
 
     private int compare(E v1, E v2) {
         return comparator == null ? v1.compareTo(v2) : comparator.compare(v1, v2);
     }
 
-    public static void main(String[] args) {
-        AVLTree<Integer> tree = new AVLTree<>();
-        tree.add(10);
-        tree.add(5);
-        tree.add(15);
-        System.out.println(tree.inorderTraverse());
-        System.out.println(tree.size);
-        System.out.println(tree);
-        tree.remove(10);
-        tree.remove(15);
-        System.out.println(tree.size);
-        System.out.println(tree);
-        tree.remove(5);
-        System.out.println(tree.size);
-        System.out.println(tree);
-        tree.add(15);
-        System.out.println(tree.size);
-        System.out.println(tree);
 
-        System.out.println("------------");
-        Random rnd = new Random();
-        tree = new AVLTree<>();
-        for (int i = 0; i < 15; i++) {
-            tree.add(rnd.nextInt(50));
+    public static void main(String[] args) {
+        Random random = new Random();
+        int LEN = 100;
+        int value;
+        ISortedSet<Integer> set = new AVLTree<>();
+
+        for (int i = 0; i < 10; i++) {
+            value = i; //(random.nextInt(1000));
+            System.out.print(i + ". " + value);
+            System.out.println(": " + set.add(value) + ", " + set.contains(value));
         }
-        System.out.println(tree.inorderTraverse());
-        tree = new AVLTree<>((v1, v2) -> {
-            // Even first
-            final int c = Integer.compare(v1 % 2, v2 % 2);
-            return c != 0 ? c : Integer.compare(v1, v2);
-        });
-        for (int i = 0; i < 15; i++) {
-            tree.add(rnd.nextInt(50));
-        }
-        System.out.println(tree.inorderTraverse());
+
+//        for (int value = 0; value < LEN; value++) {
+//            set.add(value);
+//        }
+//        for (int value = LEN; value >= 0; value--) {
+//            System.out.println(value + ": " + set.contains(value)
+//                    + ", " + set.remove(value) + ", " + set.contains(value));
+//        }
+
     }
 }

@@ -1,9 +1,6 @@
 package ru.mail.polis;
-
-import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.List;
-import java.util.Hashtable;
+
 
 //TODO: write code here
 public class OpenHashTable<E extends Comparable<E>> implements ISet<E> {
@@ -42,7 +39,7 @@ public class OpenHashTable<E extends Comparable<E>> implements ISet<E> {
 
     @Override
     public boolean isEmpty() {
-        return false;
+        return size == 0;
     }
 
     @Override
@@ -62,6 +59,8 @@ public class OpenHashTable<E extends Comparable<E>> implements ISet<E> {
     @Override
     public boolean add(E value) {
         int hash, attempt=0;
+   /*     if(value==null)
+            return false;//*/
         do{
             hash = hash(value, attempt);
             if(table[hash]==null || table[hash]==DELETED){
@@ -70,6 +69,8 @@ public class OpenHashTable<E extends Comparable<E>> implements ISet<E> {
                 resize();
                 return true;
             }
+            if(table[hash].value==value)
+                return false;
             attempt++;
         } while(attempt!=table.length);
         return false;
@@ -77,6 +78,8 @@ public class OpenHashTable<E extends Comparable<E>> implements ISet<E> {
 
     @Override
     public boolean remove(E value) {
+     /*   if(value==null)
+            return false;//*/
         int hash=search(value);
         if(hash != -1) {
             table[hash] = DELETED;
@@ -87,7 +90,19 @@ public class OpenHashTable<E extends Comparable<E>> implements ISet<E> {
     }
 
     private int hash(E value, int attemptNum) {
-        return (Math.abs(value.hashCode() % table.length + attemptNum * (2 * Math.abs(value.hashCode()) + 1))  % table.length) % table.length;
+        return (Math.abs(value.hashCode()+ attemptNum * (2 * hash_2(value) + 1))) % table.length;
+    }
+
+    private int hash_2(E value){
+        int hash=5381;
+        int valHash=value.hashCode();
+        int c;
+        do{
+            c=valHash%10;
+            valHash=valHash/10;
+            hash=((hash<<5)+hash)+c;
+        }while(valHash>0);
+        return hash;
     }
 
     private void resize() {
@@ -105,12 +120,13 @@ public class OpenHashTable<E extends Comparable<E>> implements ISet<E> {
 
     private int search(E value) {
         int hash,attempt=0;
-        do{
-            hash=hash(value, attempt);
+        hash=hash(value, attempt);
+        while(table[hash]!=null && attempt!=table.length){
             if(value.equals((table[hash].value)))
                 return hash;
             attempt++;
-        } while(table[hash]!=null || attempt!=table.length);
+            hash=hash(value, attempt);
+        }
         return -1;
     }
 
@@ -118,6 +134,8 @@ public class OpenHashTable<E extends Comparable<E>> implements ISet<E> {
     public static void main(String[] args) {
         OpenHashTable<String> test = new OpenHashTable<>();
         test.add("hello");
+        test.add("hello");
+//        test.remove(null);
         test.add("this");
         test.add("is");
         test.add("hash");

@@ -1,9 +1,6 @@
 package ru.mail.polis;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 
 import static ru.mail.polis.RedBlackTree.Colors.BLACK;
 import static ru.mail.polis.RedBlackTree.Colors.RED;
@@ -121,6 +118,7 @@ public class RedBlackTree<E extends Comparable<E>> implements ISortedSet<E> {
                 }
             } else {
                 Node y=z.parent.parent.left;
+
                 if(y.color==RED){
                     z.parent.color=BLACK;
                     y.color=BLACK;
@@ -233,12 +231,26 @@ public class RedBlackTree<E extends Comparable<E>> implements ISortedSet<E> {
 
     @Override
     public E first() {
-        return null;
+        if (isEmpty()) {
+            throw new NoSuchElementException("set is empty, no first element");
+        }
+        Node curr = root;
+        while (curr.left != nil) {
+            curr = curr.left;
+        }
+        return curr.value;
     }
 
     @Override
     public E last() {
-        return null;
+        if (isEmpty()) {
+            throw new NoSuchElementException("set is empty, no last element");
+        }
+        Node curr = root;
+        while (curr.right != nil) {
+            curr = curr.right;
+        }
+        return curr.value;
     }
 
     @Override
@@ -260,7 +272,7 @@ public class RedBlackTree<E extends Comparable<E>> implements ISortedSet<E> {
 
     @Override
     public int size() {
-        return 0;
+        return size;
     }
 
     @Override
@@ -275,7 +287,7 @@ public class RedBlackTree<E extends Comparable<E>> implements ISortedSet<E> {
         }
         if (root != null) {
             Node curr = root;
-            while (curr != null) {
+            while (curr != nil) {
                 int cmp = compare(curr.value, value);
                 if (cmp == 0) {
                     return true;
@@ -330,7 +342,7 @@ public class RedBlackTree<E extends Comparable<E>> implements ISortedSet<E> {
         if (value == null) {
             throw new NullPointerException("value is null");
         }
-        if (root == null) {
+        if (root == nil || root == null || !contains(value)) {
             return false;
         }
         Node z=root;
